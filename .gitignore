@@ -1,0 +1,7 @@
+/node_modules
+/dist
+/version
+.DS_Store
+npm-debug.log*
+.umi
+yarn.lock
