@@ -46,7 +46,25 @@ export default class InMemoryFileSystemProvider implements IFileSystemProviderWi
 
   root = new Directory('');
 	// --- manage file metadata
-
+	async writeFileAnyway(resource: URI, content: string, opts: FileWriteOptions = { create: true, overwrite: true}) {
+		let dirname = this._dirname(resource.path)
+    let parts = dirname.split('/');
+    let file = ''
+    for (const part of parts) {
+      if(part === ''){
+        continue;
+      }
+      file += `/${part}`
+      const uri = resource.with({
+        path: file
+      })
+      const stat = await this.stat(uri, true);
+      if(!stat) { //不存在
+        await this.mkdir(uri);
+      }
+		}
+		await this.writeFile(resource, content, opts)
+	}
 	async stat(resource: URI, silent:boolean = false): Promise<IStat> {
 		return this._lookup(resource, silent);
 	}

@@ -7,7 +7,7 @@ export function replace(text: string, data: { [key: string ]: any}): string{
 `
 export const request =  `
 export async function request(options: any): Promise<any> {
-  return null
+  return originalRequest(options)
 }
 `
 export const replaceUrl = `

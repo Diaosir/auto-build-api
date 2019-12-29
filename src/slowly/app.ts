@@ -31,7 +31,7 @@ class App {
     this.option = option;
     this.argv = new Argv();
     this.cwd = `${option.dirname || __dirname}`;
-    this.config = Load.loadAllConfig(path.join(this.cwd, '/config/'));
+    this.config = Load.loadAllConfig(path.join(this.cwd, '/config/'), option.userConfigFile);
     this.ctx = this.createContext();
     this.baseLoad = new Load(this.ctx);
     Object.keys(defaultMiddlewares).forEach((name: any) => {

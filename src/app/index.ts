@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-
 import { App, Router } from '../slowly'
 import * as path from 'path'
 const router = new Router()
 const app = new App({
-  es6: true,
+  es6: false,
   version: '1.0.0',
   name: 'auto-build-api',
-  dirname: path.dirname(__filename)
+  dirname: path.dirname(__filename),
+  userConfigFile: path.join(process.cwd(), 'auto-build-api.config.js')
 });
-const { controller, config } = app.ctx;
+const { controller } = app.ctx;
 router.register(`swagger`, 'build api by swagger ui')
-      .usage('swagger <-u | --url> <-n | --name> <-d | --definitionsRoot> <-s | --servicesRoot>')
-      .option('<-u | --url>', 'swagger docs url')
+      .usage('swagger <-u | --uri> <-n | --name> <-d | --definitionsRoot> <-o | --output>')
+      .option('<-u | --uri>', 'swagger docs url')
       .option('<-n | --name>', 'swagger service name')
-      .option('<-s | --servicesRoot>', 'swagger paths build root')
+      .option('<-o | --output>', 'swagger paths build root')
       .option('[-e | --excludes]', 'swagger excludes path')
       .option('[-i | --include]', 'swagger include path')
       .action(controller.swagger.init)

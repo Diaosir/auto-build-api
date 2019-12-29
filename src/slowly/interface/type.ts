@@ -72,6 +72,7 @@ export interface AppOptionInterface {
   version: string; 
   name: string;
   dirname?: string;
+  userConfigFile?: string; 
 }
 
 export interface EventEmitter{
