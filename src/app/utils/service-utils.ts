@@ -70,3 +70,8 @@ export function setHeaders(headers: any, inHeaders: Array<string>, parameters: a
     ...inHeadersParameters
   }
 }`
+export const logger = `
+export function log() {
+  
+}
+`

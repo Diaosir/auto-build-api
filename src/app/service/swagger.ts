@@ -221,8 +221,8 @@ export default class SwaggerService extends Service {
   async handlePathOption(apiPath: string, options: SwaggerApiPathOption) {
     for( let method in options) {
       const {tags, consumes, summary, produces, parameters, responses, description } = options[method];
-      const contentType = (consumes && consumes[0]) || '';
-      const acceptType = produces.length > 0 ? produces.join(',') ? '*/*';
+      const contentType = Array.isArray(consumes) && (consumes.length > 0 ? consumes.join(', ') : '*/*') || '';
+      const acceptType =  Array.isArray(produces) && (produces.length > 0 ? produces.join(', ') : '*/*') || '';
       const name = this._getServiceName({
         ...options[method],
         path: apiPath
@@ -280,7 +280,7 @@ export default class SwaggerService extends Service {
       if(!!contentType) {
         requestOptions.headers = {
           'Content-Type': contentType,
-          "Accept": 
+          "Accept": acceptType
         }
       }
       await this.generateApiFile(apiFilePath, {
