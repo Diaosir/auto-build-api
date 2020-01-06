@@ -9,7 +9,7 @@ export default class Argv implements ArgvInterface {
   public name: string;
   public execPath: string;
   public query: {
-    [propName: string]: any;
+    [prop: string]: any;
   }
   constructor(argv?: Array<string>) {
     this.originalArgv = argv || process.argv;
@@ -20,7 +20,6 @@ export default class Argv implements ArgvInterface {
     this.generateParams();
   }
   parseArgv() {
-    // console.log(process.execPath)
     if (/\b(node|iojs|electron)(\.exe)?$/.test(this.originalArgv[0])) {
       this.name = this.originalArgv[1]
     } else {

@@ -71,7 +71,6 @@ export interface AppOptionInterface {
   es6?: boolean;
   version: string; 
   name: string;
-  dirname?: string;
   userConfigFile?: string; 
 }
 
