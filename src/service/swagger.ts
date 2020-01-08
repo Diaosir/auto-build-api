@@ -1,4 +1,4 @@
-import { Service } from '../../slowly'
+import { Service } from 'slowly'
 import Memfs from '../utils/memfs'
 import { URI } from '../utils/uri';
 import * as SwaggerUtils from '../utils/service-utils'

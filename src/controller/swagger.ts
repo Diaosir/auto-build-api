@@ -1,5 +1,5 @@
 const chalk = require('chalk');
-import { Controller } from '../../slowly'
+import { Controller } from 'slowly'
 
 
 export default class HomeController extends Controller {

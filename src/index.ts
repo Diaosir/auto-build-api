@@ -1,12 +1,10 @@
 #!/usr/bin/env node
-import { App, Router } from '../slowly'
+import { App, Router } from 'slowly'
 import * as path from 'path'
 const router = new Router()
 const app = new App({
-  es6: false,
   version: '1.0.0',
   name: 'auto-build-api',
-  dirname: path.dirname(__filename),
   userConfigFile: path.join(process.cwd(), 'auto-build-api.config.js')
 });
 const { controller } = app.ctx;

@@ -19,6 +19,6 @@ module.exports = {
   },
   "testMatch": [
     "<rootDir>/test/**/*(*.)@(spec|test).[tj]s?(x)",
-    "<rootDir>/src/app/test/**/*(*.)@(spec|test).[tj]s?(x)"
+    "<rootDir>/src/test/**/*(*.)@(spec|test).[tj]s?(x)"
   ]
 };
