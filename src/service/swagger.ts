@@ -7,6 +7,8 @@ import { SwaggerPathsOption, SwaggerData, SwaggerDefinition, SwaggerApiPathOptio
 import * as fs from 'fs';
 import * as globRoRegExp from 'glob-to-regexp';
 import * as fse from 'fs-extra';
+import * as ejs from 'ejs'
+import templateEjs from '../template/file';
 const outputFileSync = require('output-file-sync');
 const request = require('request');
 import * as ora from 'ora'
@@ -60,6 +62,7 @@ export default class SwaggerService extends Service {
   public typescript: boolean = true;
   public includes: Array<RegExp> = [];
   public requireFunctionUri: URI;
+  public includeDefinitions: Set<string> = new Set();
   async init(swaggerConfig: any) {
     const { name, output, include, uri, swaggerJson } = swaggerConfig;
     this.options = {
@@ -83,12 +86,17 @@ export default class SwaggerService extends Service {
     return this;
   }
   async generate(){
-    const { paths } = this.swaggerJson;
+    const { paths, definitions } = this.swaggerJson;
     const { config: { swagger: { globalDefinitions } } } = this.ctx;
-    if(!!globalDefinitions) {
-      for(let name in globalDefinitions) {
-        await this.gennerateDefinition(name, globalDefinitions[name]);
-      }
+    const compineDefinitions = {
+      ...globalDefinitions,
+      ...definitions
+    }
+    for(let name in globalDefinitions) {
+      this.includeDefinitions.add(name)
+    }
+    for(let name in compineDefinitions) {
+      await this.gennerateDefinition(name, compineDefinitions[name]);
     }
     if(!!paths) {
       for(let apiPath in paths) {
@@ -142,7 +150,7 @@ export default class SwaggerService extends Service {
   async gennerateDefinition(name: string, inputDefinition: SwaggerDefinition) {
     const _this = this;
     let importCode = ''
-    let code = `export interface ${name} { \n`;
+    let code = `interface ${name} { \n`;
     const definition = this._compineAdditionalProperties(inputDefinition);
     if (definition.properties && Object.keys(definition.properties).length > 0) {
       for(let definitionKey of Object.keys(definition.properties)) {
@@ -160,7 +168,7 @@ export default class SwaggerService extends Service {
     code += '}';
     const uri = URI.parse(`localFs:${path.join(`${this.interfaceRoot}`, `${name}${this._getExtName()}`)}`);
     await this.swaggerFileSystem.writeFileAnyway(uri, importCode + code, { create: true, overwrite: true});
-    await this._createOrUpdateInterfaceIndexFile(URI.parse(`localFs:${this.interfaceRoot}/index.ts`), code);
+    await this._createOrUpdateInterfaceIndexFile(URI.parse(`localFs:${this.interfaceRoot}/index.d.ts`), code);
     return {
       uri,
       code,
@@ -177,7 +185,7 @@ export default class SwaggerService extends Service {
       if(!this.typescript && filepath.indexOf(this.interfaceRoot) > -1 ) {
         return;
       }
-      if(swagger.compineInterface && filepath.indexOf(this.interfaceRoot) > -1 && filepath !== `${this.interfaceRoot}/index.ts`) {
+      if(swagger.compineInterface && filepath.indexOf(this.interfaceRoot) > -1 && [`${this.interfaceRoot}/index.ts`, `${this.interfaceRoot}/index.d.ts`].indexOf(filepath) === -1 ) {
         return;
       }
       outputFileSync(path.join(process.cwd(), filepath), file.data, 'utf-8');
@@ -192,25 +200,26 @@ export default class SwaggerService extends Service {
     const { parametersInterfaceUri, responsesInterfaceUri } = data;
     const serviceUri = URI.parse(`localFs:${path.join(`${this.serviceRoot}`, apiFilePath)}`);
     let apiFileContent = '';
-    const dirname = path.dirname(serviceUri.fsPath);
-    const compineUris = this._compineUri([parametersInterfaceUri, responsesInterfaceUri])
-    if(swagger.compineInterface) {
-      apiFileContent += 'import { '
-      compineUris.map((uri, index) => {
-        const { name } = path.parse(uri.fsPath);
-        apiFileContent += `${name}${index < compineUris.length - 1 ? ', ' : ''}`;
-      })
-      apiFileContent += ` } from '${path.relative(dirname, this.interfaceRoot)}'\n`;
-    } else {
-      compineUris.map(uri => {
-        const relativePath = path.relative(dirname, uri.fsPath)
-        const { name } = path.parse(uri.fsPath);
-        apiFileContent += `import { ${name} } from '${this._replacePathExt(relativePath)}'\n`;
-      })
-    }
+    // const dirname = path.dirname(serviceUri.fsPath);
+    // const compineUris = this._compineUri([parametersInterfaceUri, responsesInterfaceUri])
+    // if(swagger.compineInterface) {
+    //   apiFileContent += 'import { '
+    //   compineUris.map((uri, index) => {
+    //     const { name } = path.parse(uri.fsPath);
+    //     apiFileContent += `${name}${index < compineUris.length - 1 ? ', ' : ''}`;
+    //   })
+    //   apiFileContent += ` } from '${path.relative(dirname, this.interfaceRoot)}'\n`;
+    // } else {
+    //   compineUris.map(uri => {
+    //     const relativePath = path.relative(dirname, uri.fsPath)
+    //     const { name } = path.parse(uri.fsPath);
+    //     apiFileContent += `import { ${name} } from '${this._replacePathExt(relativePath)}'\n`;
+    //   })
+    // }
 
     apiFileContent += this._getTemplate(serviceUri.fsPath, data)
     await this.swaggerFileSystem.writeFileAnyway(serviceUri, apiFileContent || '', { create: true, overwrite: true});
+
     await this._createOrUpdateIndexFile(serviceUri);
   }
   /**
@@ -306,9 +315,13 @@ export default class SwaggerService extends Service {
   }
   private async _dynamicCreateDefinitions($ref: string) {
     const modelName = this._getModelbyPath($ref);
-    if(this.typescript && this.swaggerJson) {
-      await this.gennerateDefinition(modelName, this.swaggerJson.definitions[modelName]);
-    }
+    // if(this.typescript && this.swaggerJson) {
+    //   const uri = URI.parse(`localFs:${path.join(`${this.interfaceRoot}`, `${modelName}${this._getExtName()}`)}`);
+    //   const stat = await this.swaggerFileSystem.stat(uri, true);
+    //   if(!stat) {
+    //     await this.gennerateDefinition(modelName, this.swaggerJson.definitions[modelName]);
+    //   }
+    // }
     return modelName;
   }
   private _getModelbyPath($ref: string) {
@@ -350,7 +363,7 @@ export default class SwaggerService extends Service {
     let indexContent = content;
     try{
       const data = await this.swaggerFileSystem.readFile(uri);
-      indexContent = `${data}\n${indexContent}`
+      indexContent = `${data}\n${data.indexOf(indexContent) > -1 ? '' : indexContent}`
     } catch(error) {}
     await this.swaggerFileSystem.writeFileAnyway(uri, indexContent, { create: true, overwrite: true})
   }
@@ -396,20 +409,22 @@ export default class SwaggerService extends Service {
     const hasInBody = Array.isArray(parameterInObj.body) && parameterInObj.body.length > 0;
     const hasFormData = Array.isArray(parameterInObj.formData) && parameterInObj.formData.length > 0;
     const hasHeader = Array.isArray(parameterInObj.header) && parameterInObj.header.length > 0;
-    let template = `import { request${ hasInPath ? ", replaceUrl" : ''}${hasInQuery ? ', qs' : ''}${hasInBody ? ', stringifyBody' : ''}${hasHeader ? ', setHeaders' : ''}${hasFormData ? ', setFormData' : ''} } from '${this._replacePathExt(utilRelativePath)}';
-/**
- * {summary}
- */
-export default async function {name}(${data.hasParameters ? `parameters${this.typescript ? ': {parametersInterfaceName}' : ''}` : ''})${this.typescript ? `: Promise<${data.responseIsArray ? 'Array<{responsesInterfaceName}>' : '{responsesInterfaceName}'}>` : ''} {
-  const options${this.typescript ? ': any' : ''} = {options};\n`
-  +(hasInQuery ? `  options.url += qs(${JSON.stringify(data.parameterInObj.query)}, parameters);\n`: '')
-  +(hasInPath ? `  options.url = replaceUrl(options.url, ${JSON.stringify(data.parameterInObj.path)}, parameters);\n` : '')
-  +(hasInBody ? `  options.body = stringifyBody(${allInBody ? '[]' : JSON.stringify(data.parameterInObj.body)}, parameters);\n` : '')
-  +(hasFormData ? `  options.body = setFormData(${JSON.stringify(data.parameterInObj.formData)}, parameters);\n` : '')
-  +(hasHeader ? `  options.headers = setHeaders(options.headers, ${JSON.stringify(data.parameterInObj.header)}, parameters)\n` : '')
-+`  return request(options)
-}`
-    return this._simpleReplace(template, data)
+
+    const { config: { swagger: { prefix = '' } } } = this.ctx;
+    const url = data.options.url
+    delete data.options.url
+    return ejs.render(templateEjs, {
+      ...data,
+      hasInQuery,
+      hasInPath,
+      hasInBody,
+      hasFormData,
+      hasHeader,
+      typescript: this.typescript,
+      utilFilePath: this._replacePathExt(utilRelativePath),
+      url: `${prefix || ''}${url}`
+    })
+    // return this._simpleReplace(template, data)
   }
   private _replacePathExt(filepath: string): string {
     return filepath.replace(path.extname(filepath), '');

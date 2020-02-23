@@ -1,6 +1,7 @@
 import * as path from 'path';
 export default {
   swagger: {
+    prefix: '${APIPERFIX2}/letterAdmin',
     name: '1',
     compineInterface: true,
     serviceName: function(options) {
@@ -8,6 +9,19 @@ export default {
       return name
     },
     globalDefinitions: {
+      'CommonRequestOptions': {
+        type: 'object',
+        properties: {
+          "$path": {
+            "type": "string",
+            "description": 'replace path'
+          },
+          "$timeout": {
+            "type": 'number',
+            "description": "$timeout"
+          }
+        }
+      },
       'Response': {
         type: 'object',
         properties: {
